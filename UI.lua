@@ -75,6 +75,60 @@ function ui.New(args)
 		self.Gui.Window.Nav.Close.MouseButton1Click:Connect(function()
 			self:Minimize()
 		end)
+		if args.Draggable then
+			local UserInputService = game:GetService("UserInputService")
+			local RunService = game:GetService("RunService")
+
+			local Dragging
+			local DragInput
+			local DragStart
+			local StartPos
+
+			local function Lerp(a, b, m)
+				return a + (b - a) * m
+			end
+
+			local LastMousePos
+			local LastGoalPos
+			local DragSpeed = 8
+			local function Update(dt)
+				if not StartPos then return end
+				if not Dragging and LastGoalPos then
+					self.Gui.Window.Position = UDim2.new(StartPos.X.Scale, Lerp(self.Gui.Window.Position.X.Offset, LastGoalPos.X.Offset, dt * DragSpeed), StartPos.Y.Scale, Lerp(self.Gui.Window.Position.Y.Offset, LastGoalPos.Y.Offset, dt * DragSpeed))
+					return 
+				end
+
+				local delta = (LastMousePos - UserInputService:GetMouseLocation())
+				local xGoal = (StartPos.X.Offset - delta.X)
+				local yGoal = (StartPos.Y.Offset - delta.Y)
+				LastGoalPos = UDim2.new(StartPos.X.Scale, xGoal, StartPos.Y.Scale, yGoal)
+				self.Gui.Window.Position = UDim2.new(StartPos.X.Scale, Lerp(self.Gui.Window.Position.X.Offset, xGoal, dt * DragSpeed), StartPos.Y.Scale, Lerp(self.Gui.Window.Position.Y.Offset, yGoal, dt * DragSpeed))
+			end
+
+			self.Gui.Window.Nav.InputBegan:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					Dragging = true
+					DragStart = input.Position
+					StartPos = self.Gui.Window.Position
+					LastMousePos = UserInputService:GetMouseLocation()
+
+					input.Changed:Connect(function()
+						if input.UserInputState == Enum.UserInputState.End then
+							Dragging = false
+						end
+					end)
+				end
+			end)
+
+			self.Gui.Window.Nav.InputChanged:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+					DragInput = input
+				end
+			end)
+
+			RunService.Heartbeat:Connect(Update)
+		end
+
 		local utils = require(script.Utils)
 		script.Notification.Parent = self.Gui.Notifications
 		--spawn(function()
@@ -182,19 +236,21 @@ function ui:Tab(args)
 			end)
 			table.insert(self.TabsObjects,newTab)
 			local function ChangeTab()
-				self.TabChange = true
-				if not newTab.Active then
-					newTab:HideAll()
-					for i,tab in pairs(self.TabsObjects) do
-						if tab.Active then
-							tab:HideAll()
-							tab:_Deactive()
+				if newTab.Enabled then
+					self.TabChange = true
+					if not newTab.Active then
+						newTab:HideAll()
+						for i,tab in pairs(self.TabsObjects) do
+							if tab.Active then
+								tab:HideAll()
+								tab:_Deactive()
+							end
 						end
+						newTab:_Active()
+						newTab:ShowAll()
 					end
-					newTab:_Active()
-					newTab:ShowAll()
+					self.TabChange = false
 				end
-				self.TabChange = false
 			end
 			if newTab.Active and #self.TabsObjects > 1 then
 				for i,tab in pairs(self.TabsObjects) do
@@ -241,6 +297,11 @@ function ui:Maximize()
 		self.TabChange = true
 		utils.anim(self.Gui.Window,0.3,{BackgroundTransparency=0})
 		utils.anim(self.Gui.Window.Nav.Close,0.3,{ImageTransparency=0})
+		for i,tabButton in pairs(self.Gui.Window.Nav.Tabs:GetChildren()) do
+			if tabButton:IsA("Frame") and tabButton.Name ~= "UIInfo" then
+				tabButton.Visible = true
+			end
+		end
 		for i,tabObj in pairs(self.TabsObjects) do
 			if tabObj.Active then
 				tabObj:Show(true)
@@ -283,6 +344,11 @@ function ui:Minimize()
 		CloseBtn.ImageRectOffset = Vector2.new(324,364)
 		CloseBtn.ImageRectSize = Vector2.new(36,36)
 		utils.anim(self.Gui.Window.Nav.Close,0.3,{ImageTransparency=0})
+		for i,tabButton in pairs(self.Gui.Window.Nav.Tabs:GetChildren()) do
+			if tabButton:IsA("Frame") and tabButton.Name ~= "UIInfo" then
+				tabButton.Visible = false
+			end
+		end
 		self.TabChange = false
 		self.__Minimize = true
 	else

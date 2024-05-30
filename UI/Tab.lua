@@ -12,6 +12,7 @@ function Tab.New(args,parent,eventCallback)
 	local self = setmetatable({},Tab)
 	self.Name = args.Name
 	self.Active = args.Active or false
+	self.Enabled = true
 	self.EventCallback = eventCallback or function() end
 	self.ElementsObjects = {}
 	
@@ -89,6 +90,7 @@ function Tab:Hide()
 	anim(self.TabButton.Button.Close.CloseBtn,0.3,{BackgroundTransparency=1})
 	anim(self.TabButton.Button.TabName,0.3,{TextTransparency=1})
 	self.TabFrame.Visible = false
+	self.Enabled = false
 end
 
 function Tab:Show(setVisible)
@@ -96,6 +98,7 @@ function Tab:Show(setVisible)
 		self.TabFrame.Visible = true
 	end
 	anim(self.TabFrame,0.3,{BackgroundTransparency=0})
+	self.Enabled = true
 end
 
 function Tab:ShowButton(Active)
